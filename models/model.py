@@ -6,7 +6,7 @@ from tqdm import tqdm
 import time
 import numpy as np
 from PIL import Image
-from utils import rescale
+from ..utils import rescale
 
 
 class Model(abc.ABC):
