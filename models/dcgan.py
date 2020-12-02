@@ -33,4 +33,7 @@ class DCGAN(GAN):
             keras.layers.LeakyReLU(0.2),
             keras.layers.Conv2D(filters=128, kernel_size=5, strides=2, padding="SAME"),
             keras.layers.BatchNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.GlobalAveragePooling2D(),
+            keras.layers.Dense(1)
         ])
