@@ -13,5 +13,5 @@ anime_dataset = process_numpy(anime_imgs, batch_size=32)
 model = CycleGAN(img_shape, batch_size=32)
 model.s_sample = list(human_dataset.take(1).as_numpy_iterator())[0]
 model.t_sample = list(anime_dataset.take(1).as_numpy_iterator())[0]
-# model.train(human_dataset, anime_dataset)
+model.train(human_dataset, anime_dataset)
 model.generate_samples(path="./results/cyclegan.png")
