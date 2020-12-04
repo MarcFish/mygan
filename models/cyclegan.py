@@ -43,7 +43,7 @@ class CycleGAN(GAN):
             dis_fake_t = self.dis_t(fake_t)
 
             gen_s_loss = self._gen_loss(dis_real_s, dis_fake_s)
-            gen_t_loss = self._gen_loss(dis_real_t, dis_real_t)
+            gen_t_loss = self._gen_loss(dis_real_t, dis_fake_t)
 
             total_cycle_loss = self._cycle_loss(real_s, cycle_s) + self._cycle_loss(real_t, cycle_t)
 
