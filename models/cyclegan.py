@@ -189,7 +189,7 @@ class CycleGAN(GAN):
 
     def generate_samples(self, epoch=0, save=True, show=False, path=None):
         s = self.s_sample[:4]
-        t = self.s_sample[:4]
+        t = self.t_sample[:4]
         t_ = self.s2t(s)
         s_ = self.t2s(t)
         s = rescale(s)
