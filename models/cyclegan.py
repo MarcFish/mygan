@@ -104,7 +104,11 @@ class CycleGAN(GAN):
             keras.layers.Conv2D(filters=256, kernel_size=5, strides=2, padding="SAME"),
             tfa.layers.InstanceNormalization(),
             keras.layers.LeakyReLU(0.2),
-            keras.layers.Conv2D(filters=1, kernel_size=5, strides=2, padding="SAME"),
+            keras.layers.Conv2D(filters=128, kernel_size=5, strides=2, padding="SAME"),
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.GlobalAveragePooling2D(),
+            keras.layers.Dense(1)
         ])
         self.dis_t = keras.Sequential([
             keras.layers.Conv2D(filters=1024, kernel_size=5, strides=2, padding="SAME"),
@@ -116,7 +120,11 @@ class CycleGAN(GAN):
             keras.layers.Conv2D(filters=256, kernel_size=5, strides=2, padding="SAME"),
             tfa.layers.InstanceNormalization(),
             keras.layers.LeakyReLU(0.2),
-            keras.layers.Conv2D(filters=1, kernel_size=5, strides=2, padding="SAME"),
+            keras.layers.Conv2D(filters=128, kernel_size=5, strides=2, padding="SAME"),
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.GlobalAveragePooling2D(),
+            keras.layers.Dense(1)
         ])
 
     def _get_unet(self):
