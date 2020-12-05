@@ -92,8 +92,54 @@ class CycleGAN(GAN):
         return self.lambda_ * 0.5 * tf.reduce_mean(tf.abs(real - same))
 
     def _create_model(self):
-        self.gen_s = self._get_unet()
-        self.gen_t = self._get_unet()
+        self.gen_s = keras.Sequential([
+            keras.layers.Conv2D(filters=1024, kernel_size=5, strides=2, padding="SAME"),  # 32
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=512, kernel_size=5, strides=2, padding="SAME"),  # 16
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=256, kernel_size=5, strides=2, padding="SAME"),  # 8
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=128, kernel_size=5, strides=2, padding="SAME"),  # 4
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=1024, kernel_size=5, strides=2, padding="SAME"),  # 8
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=512, kernel_size=5, strides=2, padding="SAME"),  # 16
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=256, kernel_size=5, strides=2, padding="SAME"),  # 32
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=3, kernel_size=5, strides=2, padding="SAME", activation="tanh"),  # 64
+        ])
+        self.gen_t = keras.Sequential([
+            keras.layers.Conv2D(filters=1024, kernel_size=5, strides=2, padding="SAME"),  # 32
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=512, kernel_size=5, strides=2, padding="SAME"),  # 16
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=256, kernel_size=5, strides=2, padding="SAME"),  # 8
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2D(filters=128, kernel_size=5, strides=2, padding="SAME"),  # 4
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=1024, kernel_size=5, strides=2, padding="SAME"),  # 8
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=512, kernel_size=5, strides=2, padding="SAME"),  # 16
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=256, kernel_size=5, strides=2, padding="SAME"),  # 32
+            tfa.layers.InstanceNormalization(),
+            keras.layers.LeakyReLU(0.2),
+            keras.layers.Conv2DTranspose(filters=3, kernel_size=5, strides=2, padding="SAME", activation="tanh"),  # 64
+        ])
         self.dis_s = keras.Sequential([
             keras.layers.Conv2D(filters=1024, kernel_size=5, strides=2, padding="SAME"),
             tfa.layers.InstanceNormalization(),
