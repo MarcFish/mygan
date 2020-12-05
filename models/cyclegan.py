@@ -33,8 +33,8 @@ class CycleGAN(GAN):
             fake_s = self.gen_t(real_t)
             cycle_t = self.gen_s(fake_s)
 
-            same_s = self.gen_s(real_s)
-            same_t = self.gen_t(real_t)
+            same_t = self.gen_s(real_t)
+            same_s = self.gen_t(real_s)
 
             dis_real_s = self.dis_s(real_s)
             dis_real_t = self.dis_t(real_t)
@@ -47,8 +47,8 @@ class CycleGAN(GAN):
 
             total_cycle_loss = self._cycle_loss(real_s, cycle_s) + self._cycle_loss(real_t, cycle_t)
 
-            total_gen_s_loss = gen_s_loss + total_cycle_loss + self._indentity_loss(real_s, same_s)
-            total_gen_t_loss = gen_t_loss + total_cycle_loss + self._indentity_loss(real_t, same_t)
+            total_gen_s_loss = gen_s_loss + total_cycle_loss + self._indentity_loss(real_t, same_t)
+            total_gen_t_loss = gen_t_loss + total_cycle_loss + self._indentity_loss(real_s, same_s)
 
             dis_s_loss = self._dis_loss(dis_real_s, dis_fake_s)
             dis_t_loss = self._dis_loss(dis_real_t, dis_fake_t)
