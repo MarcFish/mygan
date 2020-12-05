@@ -177,11 +177,11 @@ class CycleGAN(GAN):
         return keras.Model(inputs=input_s, outputs=x)
 
     def s2t(self, s):
-        t = self.gen_s(s)
+        t = self.gen_s(s, training=False)
         return t.numpy()
 
     def t2s(self, t):
-        s = self.gen_t(t)
+        s = self.gen_t(t, training=False)
         return s.numpy()
 
     def generate(self):
