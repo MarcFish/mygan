@@ -1,12 +1,12 @@
 import numpy as np
 from PIL import Image
 from mygan.utils import process_numpy
-from mygan.models import GAN
+from mygan.models import DCGAN
 
-cat_path = "./cat64.npy"
-cat_imgs = np.load(cat_path)
+anime_path = "./anime64.npy"
+anime_imgs = np.load(anime_path)
 img_shape = (64, 64, 3)
-cat_dataset = process_numpy(cat_imgs, batch_size=32)
-model = GAN(512, img_shape, batch_size=32, perform_gp=True)
-model.train(cat_dataset)
-model.generate_samples(path="./results/gangp.png")
+anime_dataset = process_numpy(anime_imgs, batch_size=32)
+model = DCGAN(512, img_shape, batch_size=32, perform_gp=True)
+model.train(anime_dataset)
+model.generate_samples(path="./results/dcgangp.png")
