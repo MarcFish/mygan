@@ -10,7 +10,7 @@ from ..utils import rescale
 
 
 class Model(abc.ABC):
-    def __init__(self, latent_dim, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10):
+    def __init__(self, latent_dim, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10, perform_gp=False):
         self.latent_dim = latent_dim
         self.img_shape = img_shape
         self.batch_size = batch_size
@@ -18,8 +18,9 @@ class Model(abc.ABC):
         self.lr = lr
         self.l2 = l2
         self._create_model()
-        self.gen_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5)
-        self.dis_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5)
+        self.perform_gp = perform_gp
+        self.gen_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
+        self.dis_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
 
     @abc.abstractmethod
     def _create_model(self):
@@ -36,12 +37,23 @@ class Model(abc.ABC):
     @tf.function
     def _train_step(self, images):
         noise = tf.random.normal((self.batch_size, self.latent_dim))
+        if self.perform_gp:
+            alpha = tf.random.uniform((self.batch_size, 1, 1, 1))
         with tf.GradientTape(persistent=True) as tape:
             gen_img = self.gen(noise, training=True)
             fake = self.dis(gen_img, training=True)
             real = self.dis(images, training=True)
             gen_loss = self._gen_loss(real, fake)
             dis_loss = self._dis_loss(real, fake)
+
+            if self.perform_gp:
+                average_samples = (alpha * images) + (1-alpha) * gen_img
+                gradients = tf.gradients(self.dis(average_samples), average_samples)[0]
+                gradients_sqr = tf.math.square(gradients)
+                gradients_sqr_sum = tf.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
+                gradients_l2_norm = tf.math.sqrt(gradients_sqr_sum)
+                gradients_penalty = tf.math.square(1 - gradients_l2_norm) * 10.
+                dis_loss += tf.reduce_mean(gradients_penalty)
 
         gen_gradients = tape.gradient(gen_loss, self.gen.trainable_variables)
         dis_gradients = tape.gradient(dis_loss, self.dis.trainable_variables)
