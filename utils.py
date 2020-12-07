@@ -3,7 +3,7 @@ import numpy as np
 
 
 def process_numpy(array, batch_size):
-    dataset = tf.data.Dataset.from_tensor_slices(array).batch(batch_size=batch_size, drop_remainder=True).shuffle(tf.data.experimental.AUTOTUNE).map(_process,tf.data.experimental.AUTOTUNE).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    dataset = tf.data.Dataset.from_tensor_slices(array).shuffle(tf.data.experimental.AUTOTUNE).batch(batch_size=batch_size, drop_remainder=True).map(_process,tf.data.experimental.AUTOTUNE).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     return dataset
 
 
