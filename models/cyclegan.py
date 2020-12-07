@@ -11,13 +11,14 @@ from .gan import GAN
 
 
 class CycleGAN(GAN):
-    def __init__(self, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10, lambda_=10.):
+    def __init__(self, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10, lambda_=10., perform_gp=False):
         self.img_shape = img_shape
         self.batch_size = batch_size
         self.epochs = epochs
         self.lr = lr
         self.l2 = l2
         self.lambda_ = lambda_
+        self.perform_gp = perform_gp
         self._create_model()
         self.gen_opt_s = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5)
         self.dis_opt_s = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5)
@@ -53,6 +54,24 @@ class CycleGAN(GAN):
             dis_s_loss = self._dis_loss(dis_real_s, dis_fake_s)
             dis_t_loss = self._dis_loss(dis_real_t, dis_fake_t)
 
+            if self.perform_gp:
+                alpha = tf.random.uniform((self.batch_size, 1, 1, 1))
+                average_samples = (alpha * real_s) + (1-alpha) * fake_s
+                gradients = tf.gradients(self.dis_s(average_samples), average_samples)[0]
+                gradients_sqr = tf.math.square(gradients)
+                gradients_sqr_sum = tf.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
+                gradients_l2_norm = tf.math.sqrt(gradients_sqr_sum)
+                gradients_penalty = tf.math.square(1 - gradients_l2_norm) * 10.
+                dis_s_loss += tf.reduce_mean(gradients_penalty)
+
+                alpha = tf.random.uniform((self.batch_size, 1, 1, 1))
+                average_samples = (alpha * real_t) + (1-alpha) * fake_t
+                gradients = tf.gradients(self.dis_t(average_samples), average_samples)[0]
+                gradients_sqr = tf.math.square(gradients)
+                gradients_sqr_sum = tf.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
+                gradients_l2_norm = tf.math.sqrt(gradients_sqr_sum)
+                gradients_penalty = tf.math.square(1 - gradients_l2_norm) * 10.
+                dis_t_loss += tf.reduce_mean(gradients_penalty)
         gen_s_gradients = tape.gradient(total_gen_s_loss, self.gen_s.trainable_variables)
         gen_t_gradients = tape.gradient(total_gen_t_loss, self.gen_t.trainable_variables)
         dis_s_gradients = tape.gradient(dis_s_loss, self.dis_s.trainable_variables)
