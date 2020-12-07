@@ -75,13 +75,13 @@ class CycleGAN(GAN):
                                  "gen t loss:{postfix[0][gen_t]}; dis t loss:{postfix[0][dis_t]}; "
                                  "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining} {rate_fmt}]",
                       postfix=[dict(gen_s=0.0, dis_s=0.0, gen_t=0.0, dis_t=0.0)]) as tq:
-              for s, t in zip(s_dataset, t_dataset):
-                gen_s_loss, gen_t_loss, dis_s_loss, dis_t_loss = self._train_step(s, t)
-                tq.postfix[0]["gen_s"] = gen_s_loss
-                tq.postfix[0]["gen_t"] = gen_t_loss
-                tq.postfix[0]["dis_s"] = dis_s_loss
-                tq.postfix[0]["dis_t"] = dis_t_loss
-                tq.update()
+                for s, t in zip(s_dataset, t_dataset):
+                    gen_s_loss, gen_t_loss, dis_s_loss, dis_t_loss = self._train_step(s, t)
+                    tq.postfix[0]["gen_s"] = gen_s_loss
+                    tq.postfix[0]["gen_t"] = gen_t_loss
+                    tq.postfix[0]["dis_s"] = dis_s_loss
+                    tq.postfix[0]["dis_t"] = dis_t_loss
+                    tq.update()
             print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
             self.generate_samples(epoch=epoch, show=False)
 
