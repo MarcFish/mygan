@@ -63,8 +63,9 @@ class StyleGAN(GAN):
         self.dis_opt.apply_gradients(zip(dis_gradients, self.dis.trainable_variables))
         return gen_loss, dis_loss
 
-    def generate(self):
-        style_noise = np.random.uniform(size=[1, self.latent_dim]).astype(np.float32)
-        inp_noise = np.random.normal(size=[1, *self.img_shape[0:2], 1]).astype(np.float32)
-        image = self.gen([self.constant, inp_noise, style_noise]).numpy()
+    def generate(self, n=16):
+        style_noise = np.random.uniform(size=[n, self.latent_dim]).astype(np.float32)
+        inp_noise = np.random.normal(size=[n, *self.img_shape[0:2], 1]).astype(np.float32)
+        batch_constant = tf.repeat(self.constant,repeats=n,axis=0)
+        image = self.gen([batch_constant, inp_noise, style_noise]).numpy()
         return image.squeeze()
