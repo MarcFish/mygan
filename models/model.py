@@ -74,6 +74,7 @@ class Model(abc.ABC):
                 t.update()
             print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
             self.generate_samples(epoch=epoch, show=False)
+            tf.saved_model.save(self.gen, f"gen_model_{epoch}")
 
     @abc.abstractmethod
     def generate(self, noise=None):

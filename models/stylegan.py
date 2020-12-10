@@ -28,15 +28,11 @@ class StyleGAN(GAN):
         x = constant_input
         layer_size = list(range(int(math.log2(self.img_shape[0])-2)))
         for i in layer_size:
-            x = AdaIN(128*(len(layer_size)-i))([x,style_inp,inp_noise])
-            x = AdaIN(128*(len(layer_size)-i), strides=2)([x,style_inp, inp_noise])
+            x = AdaIN(128*(len(layer_size)-i), strides=2)([x, style_inp, inp_noise])
         x = keras.layers.Conv2D(filters=self.img_shape[-1], kernel_size=1, strides=1, activation="tanh", padding='SAME')(x)
         self.gen = keras.Model(inputs=[constant_input, inp_noise, style_noise], outputs=x)
         dis_list = [keras.layers.Conv2D(filters=1024, kernel_size=1, strides=1,padding="SAME")]
         for i in layer_size:
-            dis_list.append(keras.layers.Conv2D(filters=128*(len(layer_size)-i), kernel_size=5, strides=1,padding="SAME"))
-            dis_list.append(keras.layers.LeakyReLU(0.2))
-            dis_list.append(keras.layers.BatchNormalization())
             dis_list.append(keras.layers.Conv2D(filters=128*(len(layer_size)-i), kernel_size=5, strides=2,padding="SAME"))
             dis_list.append(keras.layers.LeakyReLU(0.2))
             dis_list.append(keras.layers.BatchNormalization())

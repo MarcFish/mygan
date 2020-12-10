@@ -105,10 +105,10 @@ class CycleGAN(GAN):
             self.generate_samples(epoch=epoch, show=False)
 
     def _cycle_loss(self, real, cycle):
-        return self.lambda_ * tf.reduce_mean(tf.abs(real - cycle))
+        return self.lambda_ * tf.reduce_sum(tf.abs(real - cycle))
 
     def _indentity_loss(self, real, same):
-        return self.lambda_ * 0.5 * tf.reduce_mean(tf.abs(real - same))
+        return self.lambda_ * 0.5 * tf.reduce_sum(tf.abs(real - same))
 
     def _create_model(self):
         self.gen_s = keras.Sequential([
