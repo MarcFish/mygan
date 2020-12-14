@@ -10,13 +10,14 @@ from ..utils import rescale
 
 
 class Model(abc.ABC):
-    def __init__(self, latent_dim, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10, perform_gp=False):
+    def __init__(self, latent_dim, img_shape, lr=1e-4, l2=5e-5, batch_size=32, epochs=10, perform_gp=False, filter_num=32):
         self.latent_dim = latent_dim
         self.img_shape = img_shape
         self.batch_size = batch_size
         self.epochs = epochs
         self.lr = lr
         self.l2 = l2
+        self.filter_num = filter_num
         self._create_model()
         self.perform_gp = perform_gp
         self.gen_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
@@ -36,7 +37,7 @@ class Model(abc.ABC):
 
     @tf.function
     def _train_step(self, images):
-        noise = tf.random.normal((self.batch_size, self.latent_dim))
+        noise = tf.random.uniform((self.batch_size, self.latent_dim))
         if self.perform_gp:
             alpha = tf.random.uniform((self.batch_size, 1, 1, 1))
         with tf.GradientTape(persistent=True) as tape:
@@ -74,7 +75,7 @@ class Model(abc.ABC):
                 t.update()
             print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
             self.generate_samples(epoch=epoch, show=False)
-            tf.saved_model.save(self.gen, f"gen_model_{epoch}")
+            self.save_model(f"gen_model_{epoch}")
 
     @abc.abstractmethod
     def generate(self, noise=None):
@@ -83,7 +84,7 @@ class Model(abc.ABC):
     def generate_samples(self, epoch=0, save=True, show=False, path=None):
         img = self.generate()  # 16, 64, 64, 3
         img = rescale(img)
-        img_all = np.ndarray(shape=(4*self.img_shape[0],4*self.img_shape[0], 3), dtype=np.uint8)
+        img_all = np.ndarray(shape=(4*self.img_shape[0], 4*self.img_shape[0], 3), dtype=np.uint8)
         w = self.img_shape[0]
         for i in range(16):
             row = (i // 4) * w
@@ -97,3 +98,9 @@ class Model(abc.ABC):
                 img.save(path)
         if show:
             img.show()
+
+    def save_model(self, path):
+        tf.saved_model.save(self.gen, path)
+
+    def read_model(self, path):
+        self.gen = tf.saved_model.load(path)

@@ -22,7 +22,7 @@ class AdaIN(keras.layers.Layer):
         self.beta_dense = keras.layers.Dense(self.filters)
         self.delta_dense = keras.layers.Dense(self.filters, kernel_initializer="zeros")
         self.crop = keras.layers.Lambda(crop_to_fit)
-        self.conv = keras.layers.Conv2DTranspose(filters=self.filters, kernel_size=self.kernel_size, strides=self.strides, padding="SAME")
+        self.conv = keras.layers.Conv2DTranspose(filters=self.filters, kernel_size=self.kernel_size, strides=self.strides, padding="SAME", use_bias=False)
 
     def call(self, inputs, training=True):
         inp, style, inoise = inputs
