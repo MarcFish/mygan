@@ -73,5 +73,5 @@ class StyleGAN(GAN):
         else:
             style_noise = noise
         inp_noise = np.random.normal(size=[n, *self.img_shape[0:2], 1]).astype(np.float32)
-        image = self.gen([inp_noise, style_noise]).numpy()
+        image = self.gen([inp_noise, style_noise], training=False).numpy()
         return image.squeeze()

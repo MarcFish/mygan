@@ -45,5 +45,5 @@ class GAN(Model):
     def generate(self, n=16, noise=None):
         if noise is None:
             noise = np.random.normal(size=[n, self.latent_dim]).astype(np.float32)
-        image = self.gen(noise).numpy()
+        image = self.gen(noise, training=False).numpy()
         return image.squeeze()

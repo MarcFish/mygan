@@ -5,7 +5,7 @@ from .gan import GAN
 
 
 class DCGAN(GAN):
-    def _create_model(self, norm="batch"):
+    def _create_model(self, norm="instance"):
         self.gen = keras.Sequential()
         self.dis = keras.Sequential()
         if norm == "batch":
@@ -17,7 +17,6 @@ class DCGAN(GAN):
             f = self.filter_num * (2 ** (len(layer_size) - i))
             if i == 0:
                 self.gen.add(keras.layers.Dense(4*4*f))
-                self.gen.add(keras.layers.LeakyReLU(0.2))
                 self.gen.add(keras.layers.Reshape((4, 4, f)))
             else:
                 self.gen.add(keras.layers.Conv2DTranspose(filters=f, kernel_size=5, strides=2, padding="SAME"))

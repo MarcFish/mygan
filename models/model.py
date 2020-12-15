@@ -22,6 +22,7 @@ class Model(abc.ABC):
         self.perform_gp = perform_gp
         self.gen_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
         self.dis_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
+        self.seed = np.random.uniform(low=-1.0, high=1.0, size=(16, self.latent_dim)).astype(np.float32)
 
     @abc.abstractmethod
     def _create_model(self):
@@ -75,14 +76,14 @@ class Model(abc.ABC):
                 t.update()
             print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
             self.generate_samples(epoch=epoch, show=False)
-            self.save_model(f"gen_model_{epoch}")
+            # self.save_model(f"gen_model_{epoch}")
 
     @abc.abstractmethod
     def generate(self, noise=None):
         return NotImplementedError
 
     def generate_samples(self, epoch=0, save=True, show=False, path=None):
-        img = self.generate()  # 16, 64, 64, 3
+        img = self.generate(noise=self.seed)  # 16, 64, 64, 3
         img = rescale(img)
         img_all = np.ndarray(shape=(4*self.img_shape[0], 4*self.img_shape[0], 3), dtype=np.uint8)
         w = self.img_shape[0]
