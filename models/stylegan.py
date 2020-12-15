@@ -36,7 +36,7 @@ class StyleGAN(GAN):
             f = self.filter_num * (2 ** (len(layer_size) - i))
             self.dis.add(keras.layers.Conv2D(filters=f, kernel_size=5, strides=2, padding="SAME"))
             self.dis.add(keras.layers.LeakyReLU(0.2))
-            self.dis.add(keras.layers.LayerNormalization())
+            self.dis.add(keras.layers.BatchNormalization())
         self.dis.add(keras.layers.GlobalAveragePooling2D())
         self.dis.add(keras.layers.Dense(1))
 
