@@ -29,7 +29,7 @@ class StyleGAN(GAN):
         for i in layer_size[1:]:
             f = self.filter_num * (2 ** (len(layer_size) - i))
             x = AdaIN(f, strides=2)([x, style_inp, inp_noise])
-        x = keras.layers.Conv2D(filters=self.img_shape[-1], kernel_size=5, strides=1, activation="tanh", padding='SAME')(x)
+        x = keras.layers.Conv2D(filters=self.img_shape[-1], kernel_size=1, strides=1, padding='SAME')(x)
         self.gen = keras.Model(inputs=[inp_noise, style_noise], outputs=x)
         self.dis = keras.Sequential()
         for i in layer_size:
