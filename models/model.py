@@ -24,6 +24,10 @@ class Model(abc.ABC):
         self.dis_opt = tfa.optimizers.AdamW(lr=self.lr, weight_decay=self.l2, beta_1=0.5, beta_2=0.9)
         self.seed = np.random.uniform(low=-1.0, high=1.0, size=(16, self.latent_dim)).astype(np.float32)
 
+        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), gen_opt=self.gen_opt, dis_opt=self.dis_opt,
+                                        gen=self.gen, dis=self.dis)
+        self.manager = tf.train.CheckpointManager(self.ckpt, './ckpts', max_to_keep=5)
+
     @abc.abstractmethod
     def _create_model(self):
         return NotImplementedError
@@ -77,6 +81,7 @@ class Model(abc.ABC):
             print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
             self.generate_samples(epoch=epoch, show=False)
             # self.save_model(f"gen_model_{epoch}")
+            self.save_checkpoint()
 
     @abc.abstractmethod
     def generate(self, noise=None):
@@ -105,3 +110,9 @@ class Model(abc.ABC):
 
     def read_model(self, path):
         self.gen = tf.saved_model.load(path)
+
+    def save_checkpoint(self):
+        self.manager.save()
+
+    def restore_checkpoint(self):
+        self.ckpt.restore(self.manager.latest_checkpoint)
