@@ -13,7 +13,7 @@ class DCGAN(GAN):
         else:
             norm_layer = tfa.layers.InstanceNormalization
         layer_size = list(range(int(math.log2(self.img_shape[0]) - 1)))
-        for i in layer_size:
+        for i in layer_size[:-1]:
             f = self.filter_num * (2 ** (len(layer_size) - i))
             if i == 0:
                 self.gen.add(keras.layers.Dense(4*4*f))
@@ -22,7 +22,7 @@ class DCGAN(GAN):
                 self.gen.add(keras.layers.Conv2DTranspose(filters=f, kernel_size=5, strides=2, padding="SAME"))
                 self.gen.add(norm_layer())
                 self.gen.add(keras.layers.LeakyReLU(0.2))
-        self.gen.add(keras.layers.Conv2D(filters=self.img_shape[-1], kernel_size=1, strides=1, padding='SAME'))
+        self.gen.add(keras.layers.Conv2D(filters=self.img_shape[-1], kernel_size=5, strides=2, padding='SAME', activation="tanh"))
         for i in layer_size:
             f = self.filter_num * (2 ** (len(layer_size) - i))
             self.dis.add(keras.layers.Conv2D(filters=f, kernel_size=5, strides=2, padding="SAME"))
