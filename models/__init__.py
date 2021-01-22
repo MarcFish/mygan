@@ -4,3 +4,4 @@ from .ragan import RaGAN
 from .spectralgan import SpectralGAN
 from .cyclegan import CycleGAN
 from .stylegan import StyleGAN
+from .fastgan import FastGAN
