@@ -52,6 +52,6 @@ def get_perceptual_func(model="vgg16"):
     def perceptual(pred, target):
         m_pred = m(pred)
         m_target = m(target)
-        return tf.math.sqrt(tf.reduce_sum((m_pred-m_target)**2, axis=[1, 2, 3])) / tf.math.reduce_prod(m_pred.shape[1:])
+        return tf.math.sqrt(tf.reduce_sum((m_pred-m_target)**2, axis=[1, 2, 3])) / tf.cast(tf.math.reduce_prod(m_pred.shape[1:]), tf.float32)
 
     return perceptual

@@ -3,10 +3,14 @@ import tensorflow.keras as keras
 import tensorflow_addons as tfa
 import argparse
 from tqdm import tqdm
+import random
 
 from .gan import GAN
 from ..layers import NoiseLayer, GLULayer
+from ..utils import apply_augment, get_perceptual_func
 
+
+perceptual = get_perceptual_func()
 
 def convt(filters, kernel_size, strides, use_bias=False, padding="SAME"):
     return tfa.layers.SpectralNormalization(
@@ -75,7 +79,7 @@ def DownBlockComp(out_channels, inputs):
 class FastGAN(GAN):
     def _create_model(self):
         assert self.filter_num >= 8
-        assert self.img_shape[0] >= 128
+        assert self.img_shape[0] >= 256
         nfc_multi = {4:16, 8:8, 16:4, 32:2, 64:2, 128:1, 256:0.5, 512:0.25, 1024:0.125}
         nfc = {}
         for k, v in nfc_multi.items():
@@ -93,8 +97,6 @@ class FastGAN(GAN):
         feat_128 = SEBlock(nfc[128], [feat_8, UpBlockComp(nfc[128], feat_64)])
 
         o128 = keras.layers.Activation("tanh")((conv(self.img_shape[-1], kernel_size=3, strides=1)(feat_128)))
-        if self.img_shape[0] == 128:
-            o = keras.layers.Activation("tanh")((conv(self.img_shape[-1], kernel_size=3, strides=1)(feat_128)))
         if self.img_shape[0] >= 256:
             feat_256 = SEBlock(nfc[256], [feat_16, UpBlock(nfc[256], feat_128)])
         if self.img_shape[0] == 256:
@@ -110,4 +112,83 @@ class FastGAN(GAN):
         self._gen = keras.Model(inputs=style_noise, outputs=[o, o128])
         self.gen = keras.Model(inputs=style_noise, outputs=o)
 
-        self.dis = self.gen
+        img = keras.layers.Input(shape=self.img_shape)
+        img_128 = keras.layers.Input(shape=(128, 128, self.img_shape[-1]))
+        if self.img_shape[0] == 256:
+            feat_2 = conv(nfc[256], 3, 1)(img)
+            feat_2 = keras.layers.LeakyReLU(0.2)(feat_2)
+        if self.img_shape[0] == 512:
+            feat_2 = conv(nfc[512], 4, 2)(img)
+            feat_2 = keras.layers.LeakyReLU(0.2)(feat_2)
+        if self.img_shape[0] == 1024:
+            feat_2 = conv(nfc[1024], 4, 2)(img)
+            feat_2 = keras.layers.LeakyReLU(0.2)(feat_2)
+            feat_2 = conv(nfc[1024], 4, 2)(feat_2)
+            feat_2 = keras.layers.BatchNormalization()(feat_2)
+            feat_2 = keras.layers.LeakyReLU(0.2)(feat_2)
+
+        feat_4 = DownBlockComp(nfc[256], feat_2)
+        feat_8 = DownBlockComp(nfc[128], feat_4)
+        feat_16 = DownBlockComp(nfc[64], feat_8)
+        feat_16 = SEBlock(nfc[64], [feat_2, feat_16])
+        feat_32 = DownBlockComp(nfc[32], feat_16)
+        feat_32 = SEBlock(nfc[32], [feat_4, feat_32])
+
+        feat_last = DownBlockComp(nfc[16], feat_32)
+        feat_last = SEBlock(nfc[16], [feat_8, feat_last])
+
+        rf_0 = conv(nfc[8], 1, 1, padding="VALID")(feat_last)
+        rf_0 = keras.layers.BatchNormalization()(rf_0)
+        rf_0 = keras.layers.LeakyReLU(0.2)(rf_0)
+        rf_0 = conv(1, 4, 1, padding="VALID")(rf_0)
+        rf_0 = keras.layers.Flatten()(rf_0)
+
+        feat_small = conv(nfc[256], 4, 2)(img_128)
+        feat_small = keras.layers.LeakyReLU(0.2)(feat_small)
+        feat_small = DownBlock(nfc[128], feat_small)
+        feat_small = DownBlock(nfc[64], feat_small)
+        feat_small = DownBlock(nfc[32], feat_small)
+
+        rf_1 = conv(1, 4, 1, padding="VALID")(feat_small)
+        rf_1 = keras.layers.Flatten()(rf_1)
+
+        dis_out = keras.layers.Concatenate(axis=-1)([rf_0, rf_1])
+        self.fake_dis = keras.Model(inputs=[img,img_128], outputs=dis_out)
+
+        def decoder(inputs):
+            o = tfa.layers.AdaptiveAveragePooling2D(8)(inputs)
+            o = UpBlock(nfc[16], o)
+            o = UpBlock(nfc[32], o)
+            o = UpBlock(nfc[64], o)
+            o = UpBlock(nfc[128], o)
+            o = conv(self.img_shape[-1], 3, 1)(o)
+            o = keras.layers.Activation("tanh")(o)
+            return o
+
+        rec_img_big = decoder(feat_last)
+        rec_img_small = decoder(feat_small)
+        # TODO: part
+        self.real_dis = keras.Model(inputs=[img, img_128], outputs=[dis_out, rec_img_big, rec_img_small])
+        self.dis = [self.real_dis, self.fake_dis]
+
+    @tf.function
+    def _train_step(self, images):
+        style_noise = tf.random.uniform((self.batch_size, self.latent_dim))
+        part = random.randint(0, 3)
+        with tf.GradientTape(persistent=True) as tape:
+            gen_img, gen_img128 = self._gen(style_noise, training=True)
+            gen_img = apply_augment(gen_img)
+            gen_img128 = apply_augment(gen_img128)
+            real_img = apply_augment(images)
+            fake = self.fake_dis([gen_img, gen_img128])
+            real, rec_img_big, rec_img_small= self.real_dis([real_img, tf.image.resize(real_img, (128, 128))])
+            gen_loss = self._gen_loss(real, fake)
+            dis_loss = self._dis_loss(real, fake)
+            dis_loss += perceptual(rec_img_big, tf.image.resize(real_img, (rec_img_big.shape[1],rec_img_big.shape[1])))
+            dis_loss += perceptual(rec_img_small, tf.image.resize(real_img, (rec_img_small.shape[1], rec_img_small.shape[1])))
+
+        gen_gradients = tape.gradient(gen_loss, self._gen.trainable_variables)
+        dis_gradients = tape.gradient(dis_loss, self.real_dis.trainable_variables)
+        self.gen_opt.apply_gradients(zip(gen_gradients, self.gen.trainable_variables))
+        self.dis_opt.apply_gradients(zip(dis_gradients, self.real_dis.trainable_variables))
+        return gen_loss, dis_loss
