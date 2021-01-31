@@ -55,3 +55,17 @@ def get_perceptual_func(model="vgg16"):
         return tf.math.sqrt(tf.reduce_sum((m_pred-m_target)**2, axis=[1, 2, 3])) / tf.cast(tf.math.reduce_prod(m_pred.shape[1:]), tf.float32)
 
     return perceptual
+
+
+class EMA:
+    def __init__(self, model: keras.Model, tau=0.9):
+        self.model = keras.models.clone_model(model)
+        self.tau = tau
+
+    def register(self, model: keras.Model):
+        for w, wt in zip(self.model.weights, model.weights):
+            w.assign(wt)
+
+    def update(self, model: keras.Model):
+        for w, wt in zip(self.model.weights, model.weights):
+            w.assign(self.tau * w + (1-self.tau) * wt)
