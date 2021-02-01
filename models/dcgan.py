@@ -6,7 +6,7 @@ from .gan import GAN
 
 class DCGAN(GAN):
     def __init__(self, **kwargs):
-        self.layer_dict = {4: 16, 8: 8, 16: 4, 32: 2, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
+        self.layer_dict = {4: 32, 8: 16, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
         super(DCGAN, self).__init__(**kwargs)
 
     def _create_model(self):
@@ -29,10 +29,11 @@ class DCGAN(GAN):
         self.gen = keras.Model(inputs=noise, outputs=o)
 
         img = keras.layers.Input(shape=self.img_shape)
+        o = img
         for i, f in reversed(self.layer_dict.items()):
-            if i >= self.img_shape[0]:
+            if i < self.img_shape[0]:
                 o = keras.layers.Conv2D(filters=f * self.filter_num, kernel_size=5, strides=2, padding="SAME",
-                                        kernel_initializer=keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02))(img)
+                                        kernel_initializer=keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02))(o)
                 o = keras.layers.BatchNormalization()(o)
                 o = keras.layers.LeakyReLU(0.2)(o)
         o = keras.layers.GlobalAveragePooling2D()(o)
