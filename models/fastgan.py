@@ -6,7 +6,7 @@ from tqdm import tqdm
 import random
 
 from .gan import GAN
-from ..layers import NoiseLayer, GLULayer
+from ..layers import NoiseLayer, GLULayer, AugmentLayer
 from ..utils import apply_augment, get_perceptual_func
 
 
@@ -115,6 +115,8 @@ class FastGAN(GAN):
 
         img = keras.layers.Input(shape=self.img_shape)
         img_128 = keras.layers.Input(shape=(128, 128, self.img_shape[-1]))
+        img = AugmentLayer()(img)
+        img_128 = AugmentLayer()(img_128)
         if self.img_shape[0] == 256:
             feat_2 = conv(nfc[256], 3, 1)(img)
             feat_2 = keras.layers.LeakyReLU(0.2)(feat_2)
