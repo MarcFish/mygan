@@ -5,28 +5,37 @@ from .gan import GAN
 
 
 class DCGAN(GAN):
-    def _create_model(self, norm="batch"):
-        self.gen = keras.Sequential()
-        self.dis = keras.Sequential()
-        if norm == "batch":
-            norm_layer = keras.layers.BatchNormalization
-        else:
-            norm_layer = tfa.layers.InstanceNormalization
-        layer_size = list(range(int(math.log2(self.img_shape[0]) - 1)))
-        for i in layer_size[:-1]:
-            f = self.filter_num * (2 ** (len(layer_size) - i))
-            if i == 0:
-                self.gen.add(keras.layers.Dense(4*4*f))
-                self.gen.add(keras.layers.Reshape((4, 4, f)))
+    def __init__(self, **kwargs):
+        self.layer_dict = {4: 16, 8: 8, 16: 4, 32: 2, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
+        super(DCGAN, self).__init__(**kwargs)
+
+    def _create_model(self):
+        noise = keras.layers.Input(shape=(self.latent_dim,))
+        for i, f in self.layer_dict.items():
+            if i == 4:
+                o = keras.layers.Dense(4 * 4 * f * self.filter_num)(noise)
+                o = keras.layers.Reshape((4, 4, f * self.filter_num))(o)
             else:
-                self.gen.add(keras.layers.Conv2DTranspose(filters=f, kernel_size=5, strides=2, padding="SAME"))
-                self.gen.add(norm_layer())
-                self.gen.add(keras.layers.LeakyReLU(0.2))
-        self.gen.add(keras.layers.Conv2DTranspose(filters=self.img_shape[-1], kernel_size=5, strides=2, padding='SAME', activation="tanh"))
-        for i in layer_size:
-            f = self.filter_num * (2 ** (len(layer_size) - i))
-            self.dis.add(keras.layers.Conv2D(filters=f, kernel_size=5, strides=2, padding="SAME"))
-            self.dis.add(keras.layers.BatchNormalization())
-            self.dis.add(keras.layers.LeakyReLU(0.2))
-        self.dis.add(keras.layers.GlobalAveragePooling2D())
-        self.dis.add(keras.layers.Dense(1))
+                o = keras.layers.Conv2DTranspose(filters=f * self.filter_num, kernel_size=5, strides=2, padding="SAME",
+                                                 kernel_initializer=keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02))(o)
+                o = keras.layers.BatchNormalization()(o)
+                o = keras.layers.LeakyReLU(0.2)(o)
+            if i == self.img_shape[0] // 2:
+                break
+
+        o = keras.layers.Conv2DTranspose(filters=self.img_shape[-1], kernel_size=5, strides=2, padding='SAME',
+                                         kernel_initializer=keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02),
+                                         activation="tanh")(o)
+        self.gen = keras.Model(inputs=noise, outputs=o)
+
+        img = keras.layers.Input(shape=self.img_shape)
+        for i, f in reversed(self.layer_dict.items()):
+            if i >= self.img_shape[0]:
+                o = keras.layers.Conv2D(filters=f * self.filter_num, kernel_size=5, strides=2, padding="SAME",
+                                        kernel_initializer=keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02))(img)
+                o = keras.layers.BatchNormalization()(o)
+                o = keras.layers.LeakyReLU(0.2)(o)
+        o = keras.layers.GlobalAveragePooling2D()(o)
+        o = keras.layers.Dense(1)(o)
+
+        self.dis = keras.Model(inputs=img, outputs=o)

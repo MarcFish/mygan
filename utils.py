@@ -60,7 +60,7 @@ def get_perceptual_func(model="vgg16"):
 class EMA:
     def __init__(self, model: keras.Model, tau=0.9):
         self.model = keras.models.clone_model(model)
-        self.model.build()
+        self.model.build(model.input_shape)
         self.tau = tau
 
     def register(self, model: keras.Model):

@@ -20,7 +20,7 @@ class GAN:
         self.filter_num = filter_num
         self.perform_gp = perform_gp
         self.ema_steps = ema_steps
-        self.seed = np.random.uniform(low=-1.0, high=1.0, size=(16, self.latent_dim)).astype(np.float32)
+        self.seed = np.random.uniform(low=0.0, high=1.0, size=(16, self.latent_dim)).astype(np.float32)
 
         self._create_model()
         self.gen_opt = keras.optimizers.Adam(lr=self.lr, beta_1=0.5, beta_2=0.9)
