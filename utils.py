@@ -31,7 +31,7 @@ def apply_augment(image:tf.Tensor) -> tf.Tensor:
     image = tf.image.random_brightness(image, 0.5)
     image = tf.image.random_saturation(image, 0.0, 2.0)
     image = tf.image.random_contrast(image, 0.0, 1.0)
-    image = tf.image.random_flip_left_right(image)
+    # image = tf.image.random_flip_left_right(image)
     return image
 
 
@@ -60,6 +60,7 @@ def get_perceptual_func(model="vgg16"):
 class EMA:
     def __init__(self, model: keras.Model, tau=0.9):
         self.model = keras.models.clone_model(model)
+        self.model.build()
         self.tau = tau
 
     def register(self, model: keras.Model):

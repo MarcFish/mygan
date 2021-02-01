@@ -12,6 +12,7 @@ from ..utils import apply_augment, get_perceptual_func
 
 perceptual = get_perceptual_func()
 
+
 def convt(filters, kernel_size, strides, use_bias=False, padding="SAME"):
     return tfa.layers.SpectralNormalization(
         keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding,
@@ -86,7 +87,7 @@ class FastGAN(GAN):
             nfc[k] = int(v*self.filter_num)
 
         style_noise = keras.layers.Input(shape=(self.latent_dim,))
-        noise = style_noise[:,tf.newaxis, tf.newaxis, :]
+        noise = style_noise[:, tf.newaxis, tf.newaxis, :]
         o = convt(nfc[4]*2, kernel_size=4, strides=1, padding="VALID")(noise)
         o = keras.layers.BatchNormalization()(o)
         feat_4 = GLULayer(nfc[4])(o)
@@ -175,13 +176,11 @@ class FastGAN(GAN):
     def _train_step(self, images):
         style_noise = tf.random.uniform((self.batch_size, self.latent_dim))
         part = random.randint(0, 3)
+        real_img = apply_augment(images)
         with tf.GradientTape(persistent=True) as tape:
             gen_img, gen_img128 = self._gen(style_noise, training=True)
-            gen_img = apply_augment(gen_img)
-            gen_img128 = apply_augment(gen_img128)
-            real_img = apply_augment(images)
             fake = self.fake_dis([gen_img, gen_img128])
-            real, rec_img_big, rec_img_small= self.real_dis([real_img, tf.image.resize(real_img, (128, 128))])
+            real, rec_img_big, rec_img_small = self.real_dis([real_img, tf.image.resize(real_img, (128, 128))])
             gen_loss = self._gen_loss(real, fake)
             dis_loss = self._dis_loss(real, fake)
             dis_loss += perceptual(rec_img_big, tf.image.resize(real_img, (rec_img_big.shape[1],rec_img_big.shape[1])))

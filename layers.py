@@ -64,3 +64,19 @@ class GLULayer(keras.layers.Layer):
         w = inputs[:, :, :, :c]
         v = keras.activations.get("sigmoid")(inputs[:, :, :, c:])
         return v * w
+
+
+class AugmentLayer(keras.layers.Layer):
+    def __init__(self):
+        super(AugmentLayer, self).__init__()
+
+    def call(self, inputs, **kwargs):
+        bright = tf.random.uniform(shape=tf.shape(inputs), minval=-0.5, maxval=0.5)
+        satura = tf.random.uniform(shape=tf.shape(inputs), maxval=2.0)
+        contrast = tf.random.uniform(shape=tf.shape(inputs))
+        img = inputs + bright
+        img_mean = tf.reduce_mean(img, axis=-1, keepdims=True)
+        img = (img - img_mean) * satura + img_mean
+        img_mean = tf.reduce_mean(img, axis=[1, 2, 3], keepdims=True)
+        img = (img - img_mean) * contrast + img_mean
+        return img
