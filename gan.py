@@ -90,6 +90,10 @@ class GAN(keras.Model):
     def call(self, inputs, training=None, mask=None):
         return self.gen(inputs)
 
+    def summary(self, **kwargs):
+        self.gen.summary(**kwargs)
+        self.dis.summary(**kwargs)
+
 
 if __name__ == "__main__":
     k = 64

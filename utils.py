@@ -3,8 +3,13 @@ import tensorflow.keras as keras
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio
+import os
+from pathlib import Path
+from PIL import Image
+import tensorflow_addons as tfa
 
-layer_dict = {4: 32, 8: 16, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
+
+layer_dict = {4: 16, 8: 8, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
 
 
 def process_numpy(array, batch_size):
@@ -12,8 +17,15 @@ def process_numpy(array, batch_size):
     return dataset
 
 
-def process_directory(path, batch_size=32, image_size=(256, 256)):
-    dataset = keras.preprocessing.image_dataset_from_directory(directory=path, batch_size=batch_size, image_size=image_size, label_mode=None).map(_process,tf.data.experimental.AUTOTUNE).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+def process_directory(path, batch_size=32, img_shape=(512, 512, 3)):
+    def path_to_image(img_path):
+        img = tf.io.read_file(img_path)
+        img = tf.io.decode_image(img)
+        img.set_shape(img_shape)
+        return img
+
+    image_paths = [str(x) for x in Path(path).iterdir()]
+    dataset = tf.data.Dataset.from_tensor_slices(image_paths).map(path_to_image, tf.data.experimental.AUTOTUNE).shuffle(512).padded_batch(batch_size=batch_size, drop_remainder=True).map(_process, tf.data.experimental.AUTOTUNE).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     return dataset
 
 
@@ -62,30 +74,33 @@ def get_perceptual_func(model="vgg16"):
 
 
 class ShowCallback(keras.callbacks.Callback):
-    def __init__(self, show=False):
+    def __init__(self, show=False, save_steps=200):
         super(ShowCallback, self).__init__()
         self.imgs = []
         self.show = show
+        self.save_steps = save_steps
         if self.show:
             plt.figure()
 
     def on_train_begin(self, logs=None):
         self.noise = tf.random.normal(shape=(16, self.model.latent_dim))
 
-    def on_train_batch_begin(self, batch, logs=None):
-        img = self.model.gen(self.noise).numpy()  # 16, 64, 64, 3
-        img = rescale(img)
-        w = img.shape[1]
-        img_all = np.ndarray(shape=(4 * w, 4 * w, 3), dtype=np.uint8)
-        for i in range(16):
-            row = (i // 4) * w
-            col = (i % 4) * w
-            img_all[row:row+w, col:col+w, :] = img[i]
+    def on_train_batch_end(self, batch, logs=None):
+        if batch % self.save_steps == 0:
+            img = self.model.gen(self.noise).numpy()  # 16, 64, 64, 3
+            img = rescale(img)
+            w = img.shape[1]
+            img_all = np.ndarray(shape=(4 * w, 4 * w, 3), dtype=np.uint8)
+            for i in range(16):
+                row = (i // 4) * w
+                col = (i % 4) * w
+                img_all[row:row+w, col:col+w, :] = img[i]
 
-        self.imgs.append(img_all)
-        if self.show:
-            plt.imshow(img_all)
-            plt.pause(0.1)
+            self.imgs.append(img_all)
+            Image.fromarray(img_all).save(f"{batch}.png")
+            if self.show:
+                plt.imshow(img_all)
+                plt.pause(0.1)
 
     def make_gif(self, name="test.gif", delta=0.01):
         imageio.mimsave(name, self.imgs, "GIF", duration=delta)
@@ -124,3 +139,15 @@ class SaveCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.save_step == 0:
             self.manager.save(epoch)
+
+
+def convt(filters, kernel_size, strides, use_bias=False, padding="SAME"):
+    return tfa.layers.SpectralNormalization(
+        keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding,
+                                     kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02), use_bias=use_bias))
+
+
+def conv(filters, kernel_size, strides, use_bias=False, padding="SAME"):
+    return tfa.layers.SpectralNormalization(
+        keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding,
+                                     kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02), use_bias=use_bias))

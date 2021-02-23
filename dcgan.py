@@ -36,7 +36,7 @@ class DCGAN(GAN):
                                         kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02))(o)
                 o = keras.layers.BatchNormalization()(o)
                 o = keras.layers.LeakyReLU(0.2)(o)
-        o = keras.layers.GlobalAveragePooling2D()(o)
+        o = keras.layers.Flatten()(o)
         o = keras.layers.Dense(1)(o)
 
         self.dis = keras.Model(inputs=img, outputs=o)
