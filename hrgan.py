@@ -11,11 +11,11 @@ from utils import apply_augment, get_perceptual_func, convt, conv, layer_dict
 
 
 def norm_layer(i):
-    return tfa.layers.InstanceNormalization()(i)
+    return tfa.layers.FilterResponseNormalization()(i)
 
 
 def act_layer(i):
-    return keras.layers.Activation("swish")(i)
+    return tfa.layers.TLU()(i)
 
 
 class HrGAN(PerGAN):
@@ -59,7 +59,8 @@ class HrGAN(PerGAN):
                     for l_ in l_list:
                         t_dict.setdefault(l_, [])
                         if l == l_:
-                            o = c(o_dict[l], l, l_)
+                            # o = c(o_dict[l], l, l_)
+                            o = o_dict[l]
                             t_dict[l_].append(o)
                         elif l > l_:
                             o = down(o_dict[l], l, l_)
@@ -104,7 +105,8 @@ class HrGAN(PerGAN):
                     for l_ in l_list:
                         t_dict.setdefault(l_, [])
                         if l == l_:
-                            o = c(o_dict[l], l, l_)
+                            # o = c(o_dict[l], l, l_)
+                            o = o_dict[l]
                             t_dict[l_].append(o)
                         elif l > l_:
                             o = down(o_dict[l], l, l_)
@@ -125,12 +127,12 @@ class HrGAN(PerGAN):
 
                     o_dict[l] = o
 
-        os = []
-        for l, o in o_dict.items():
-            if l >= 32:
-                o = conv(filters=input_shape[-1], kernel_size=1, strides=1)(o)
-                o = norm_layer(o)
-                o = act_layer(o)
-                os.append(o)
+        # os = []
+        # for l, o in o_dict.items():
+        #     if l >= 32:
+        #         o = conv(filters=input_shape[-1], kernel_size=1, strides=1)(o)
+        #         o = norm_layer(o)
+        #         o = act_layer(o)
+        #         os.append(o)
         o = keras.layers.Flatten()(o_dict[min(layer_dict.keys())])
-        self.dis = keras.Model(inputs=images, outputs=[o]+os)
+        self.dis = keras.Model(inputs=images, outputs=o)

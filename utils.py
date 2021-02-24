@@ -9,7 +9,7 @@ from PIL import Image
 import tensorflow_addons as tfa
 
 
-layer_dict = {4: 16, 8: 8, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
+layer_dict = {2: 32, 4: 16, 8: 8, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
 
 
 def process_numpy(array, batch_size):
@@ -87,7 +87,7 @@ class ShowCallback(keras.callbacks.Callback):
 
     def on_train_batch_end(self, batch, logs=None):
         if batch % self.save_steps == 0:
-            img = self.model.gen(self.noise).numpy()  # 16, 64, 64, 3
+            img = self.model.gen(self.noise, training=False).numpy()  # 16, 64, 64, 3
             img = rescale(img)
             w = img.shape[1]
             img_all = np.ndarray(shape=(4 * w, 4 * w, 3), dtype=np.uint8)
