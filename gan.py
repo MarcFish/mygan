@@ -96,15 +96,13 @@ class GAN(keras.Model):
 
 
 if __name__ == "__main__":
-    k = 64
-    anime_path = f"./cat{k}.npy"
-    anime_imgs = np.load(anime_path)
-    anime_dataset = process_numpy(anime_imgs, batch_size=32)
+    anime_path = "E:/project/data/process/picture/anime64.npy"
+    anime_dataset = process_numpy(np.load(anime_path), batch_size=64)
 
     ema = EMACallback()
     show = ShowCallback()
     model = GAN()
-    model.build(anime_imgs.shape[1:])
+    model.build((64, 64, 3))
     model.compile(d_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5),
                   g_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5),
                   loss=keras.losses.BinaryCrossentropy(from_logits=True))

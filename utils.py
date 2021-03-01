@@ -9,7 +9,7 @@ from PIL import Image
 import tensorflow_addons as tfa
 
 
-layer_dict = {2: 32, 4: 16, 8: 8, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
+layer_dict = {4: 32, 8: 16, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
 
 
 def process_numpy(array, batch_size):
@@ -97,13 +97,15 @@ class ShowCallback(keras.callbacks.Callback):
                 img_all[row:row+w, col:col+w, :] = img[i]
 
             self.imgs.append(img_all)
-            Image.fromarray(img_all).save(f"{batch}.png")
+            if not os.path.exists("./results"):
+                os.mkdir("./results")
+            Image.fromarray(img_all).save(f"./results/{batch}.png")
             if self.show:
                 plt.imshow(img_all)
                 plt.pause(0.1)
 
     def make_gif(self, name="test.gif", delta=0.01):
-        imageio.mimsave(name, self.imgs, "GIF", duration=delta)
+        imageio.mimsave(f"./results/{name}", self.imgs, "GIF", duration=delta)
         return
 
 
@@ -125,6 +127,11 @@ class EMACallback(keras.callbacks.Callback):
         if self.step % self.update_step == 0:
             for w, wt in zip(self.model.gen.weights, self.ema.weights):
                 wt.assign(self.tau * wt + (1-self.tau) * w)
+
+    def on_epoch_end(self, epoch, logs=None):
+        if not os.path.exists("./models"):
+            os.mkdir("./models")
+        keras.models.save_model(self.ema, f"./models/EMA_{epoch}", include_optimizer=False)
 
 
 class SaveCallback(keras.callbacks.Callback):

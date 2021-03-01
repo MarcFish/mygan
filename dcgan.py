@@ -12,9 +12,9 @@ class DCGAN(GAN):
     def build(self, input_shape):
         noise = keras.layers.Input(shape=(self.latent_dim,))
         for i, f in layer_dict.items():
-            if i == 4:
-                o = keras.layers.Dense(4 * 4 * f * self.filter_num)(noise)
-                o = keras.layers.Reshape((4, 4, f * self.filter_num))(o)
+            if i == min(layer_dict.keys()):
+                o = keras.layers.Dense(i * i * f * self.filter_num)(noise)
+                o = keras.layers.Reshape((i, i, f * self.filter_num))(o)
             else:
                 o = keras.layers.Conv2DTranspose(filters=f * self.filter_num, kernel_size=5, strides=2, padding="SAME",
                                                  kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02))(o)

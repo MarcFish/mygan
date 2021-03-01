@@ -6,19 +6,20 @@ from tqdm import tqdm
 import random
 
 from pergan import PerGAN
+from dcgan import DCGAN
 from layers import NoiseLayer, GLULayer, AugmentLayer
 from utils import apply_augment, get_perceptual_func, convt, conv, layer_dict
 
 
 def norm_layer(i):
-    return tfa.layers.FilterResponseNormalization()(i)
+    return tfa.layers.InstanceNormalization()(i)
 
 
 def act_layer(i):
-    return tfa.layers.TLU()(i)
+    return keras.layers.Activation("swish")(i)
 
 
-class HrGAN(PerGAN):
+class HrGAN(DCGAN):
     def build(self, input_shape):
         assert input_shape[0] >= 32
 

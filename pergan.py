@@ -49,7 +49,7 @@ class PerGAN(RaGAN):
         self.gen = keras.Model(inputs=noise, outputs=o)
 
         img = keras.layers.Input(shape=input_shape)
-        # o = AugmentLayer()(img)
+        o = AugmentLayer()(img)
         o = img
         os = [o]
         for i, f in reversed(layer_dict.items()):
@@ -60,29 +60,30 @@ class PerGAN(RaGAN):
                 o = conv(f * self.filter_num, kernel_size=5, strides=1)(o)
                 o = norm_layer(o)
                 o = act_layer(o)
-                if i >= 32:
-                    o_ = conv(input_shape[-1], kernel_size=1, strides=1)(o)
-                    o_ = norm_layer(o_)
-                    o_ = keras.layers.Activation("tanh")(o_)
-                    os.append(o_)
+                # if i >= 32:
+                #     o_ = conv(input_shape[-1], kernel_size=1, strides=1)(o)
+                #     o_ = norm_layer(o_)
+                #     o_ = keras.layers.Activation("tanh")(o_)
+                #     os.append(o_)
         o = keras.layers.Flatten()(o)
 
-        self.dis = keras.Model(inputs=img, outputs=[o]+os)
+        self.dis = keras.Model(inputs=img, outputs=o)
 
     def train_step(self, images):
         noise = tf.random.normal((tf.shape(images)[0], self.latent_dim))
         with tf.GradientTape(persistent=True) as tape:
             gen_img = self.gen(noise, training=True)
-            fake, *fs = self.dis(gen_img, training=True)
-            real, *rs = self.dis(images, training=True)
-
+            # fake, *fs = self.dis(gen_img, training=True)
+            # real, *rs = self.dis(images, training=True)
+            fake = self.dis(gen_img)
+            real = self.dis(images)
             gen_loss = self._gen_loss(real, fake)
             dis_loss = self._dis_loss(real, fake)
 
-            for f, r in zip(fs, rs):
-                p = perceptual(f, r)
-                gen_loss += p / len(fs)
-                dis_loss -= p / len(fs)
+            # for f, r in zip(fs, rs):
+            #     p = perceptual(f, r)
+            #     gen_loss += p / len(fs)
+            #     dis_loss -= p / len(fs)
 
         gen_gradients = tape.gradient(gen_loss, self.gen.trainable_variables)
         dis_gradients = tape.gradient(dis_loss, self.dis.trainable_variables)

@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 ckpts
 # C extensions
+results
+models
+gen.png
+dis.png
 *.so
 *.npy
 ckpts
