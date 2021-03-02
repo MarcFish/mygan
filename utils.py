@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 from PIL import Image
 import tensorflow_addons as tfa
-
+import random
+from layers import custom_objects
 
 layer_dict = {4: 32, 8: 16, 16: 8, 32: 4, 64: 2, 128: 1, 256: 0.5, 512: 0.25, 1024: 0.125}
 
@@ -109,22 +110,46 @@ class ShowCallback(keras.callbacks.Callback):
         return
 
 
+class StyleShowCallback(ShowCallback):
+    def on_train_begin(self, logs=None):
+        self.style_list = [tf.random.normal((16, self.model.latent_dim))] * self.model.n
+        self.noise = tf.random.normal((16, *(self.model.dis.input_shape[1:])))
+        self.inp = tf.ones((16, self.model.latent_dim))
+
+    def on_train_batch_end(self, batch, logs=None):
+        if batch % self.save_steps == 0:
+            img = self.model.gen([self.inp, self.noise] + self.style_list, training=False).numpy()  # 16, 64, 64, 3
+            img = rescale(img)
+            w = img.shape[1]
+            img_all = np.ndarray(shape=(4 * w, 4 * w, 3), dtype=np.uint8)
+            for i in range(16):
+                row = (i // 4) * w
+                col = (i % 4) * w
+                img_all[row:row+w, col:col+w, :] = img[i]
+
+            self.imgs.append(img_all)
+            if not os.path.exists("./results"):
+                os.mkdir("./results")
+            Image.fromarray(img_all).save(f"./results/{batch}.png")
+            if self.show:
+                plt.imshow(img_all)
+                plt.pause(0.1)
+
+
 class EMACallback(keras.callbacks.Callback):
     def __init__(self, tau=0.9, update_step=100):
         super(EMACallback, self).__init__()
         self.tau = tau
         self.update_step = update_step
-        self.step = 0
 
     def on_train_begin(self, logs=None):
-        self.ema = keras.models.clone_model(self.model.gen)
+        self.ema = keras.Model.from_config(self.model.gen.get_config(), custom_objects=custom_objects)
         self.ema.build(self.model.gen.input_shape)
         for w, wt in zip(self.model.gen.weights, self.ema.weights):
             wt.assign(w)
 
     def on_train_batch_end(self, batch, logs=None):
-        self.step += 1
-        if self.step % self.update_step == 0:
+        if batch % self.update_step == 0:
             for w, wt in zip(self.model.gen.weights, self.ema.weights):
                 wt.assign(self.tau * wt + (1-self.tau) * w)
 
@@ -158,3 +183,37 @@ def conv(filters, kernel_size, strides, use_bias=False, padding="SAME"):
     return tfa.layers.SpectralNormalization(
         keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding,
                                      kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02), use_bias=use_bias))
+
+
+def cal_gp(dis, real, fake, weights=10.):
+    alpha = tf.random.uniform((real.shape[0], 1, 1, 1))
+    average_samples = (alpha * real) + (1 - alpha) * fake
+    gradients = tf.gradients(dis(average_samples), average_samples)[0]
+    gradients_sqr = tf.math.square(gradients)
+    gradients_sqr_sum = tf.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
+    gradients_l2_norm = tf.math.sqrt(gradients_sqr_sum)
+    gradients_penalty = tf.math.square(1 - gradients_l2_norm) * weights
+    return tf.reduce_mean(gradients_penalty)
+
+
+class PathCallback(keras.callbacks.Callback):
+    def __init__(self, tau=0.99, gp_step=2, pl_step=16):
+        super(PathCallback, self).__init__()
+        self.tau = tau
+        self.gp_step = gp_step
+        self.pl_step = pl_step
+
+    def on_train_batch_begin(self, batch, logs=None):
+        self.model.m = random.randint(0, self.model.n)
+        if batch % self.gp_step:
+            self.model.perform_gp = True
+        else:
+            self.model.perform_gp = False
+
+        if batch % self.pl_step:
+            self.model.perform_pl = True
+            if self.model.pl_mean == 0:
+                self.model.pl_mean = tf.reduce_mean(self.model.pl_length)
+            self.model.pl_mean = self.tau * self.model.pl_mean + (1 - self.tau) * self.model.pl_length
+        else:
+            self.model.perform_pl = False

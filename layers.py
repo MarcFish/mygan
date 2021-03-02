@@ -49,3 +49,41 @@ class AugmentLayer(keras.layers.Layer):
         img = (img - img_mean) * contrast + img_mean
         return img
 
+
+class AdaInstanceNormalization(keras.layers.Layer):
+    def __init__(self, units, **kwargs):
+        super(AdaInstanceNormalization, self).__init__(**kwargs)
+        self.units = units
+
+    def build(self, input_shape):
+        noise_shape = input_shape[0]
+        style_shape = input_shape[1]
+        self.b = keras.layers.Dense(self.units, kernel_initializer="he_normal", bias_initializer="ones")
+        self.g = keras.layers.Dense(self.units, kernel_initializer="he_normal", bias_initializer="zeros")
+        self.b.build(style_shape)
+        self.g.build(style_shape)
+        super(AdaInstanceNormalization, self).build(input_shape)
+
+    def call(self, inputs, **kwargs):
+        noise = inputs[0]
+        style = inputs[1]
+        beta = self.b(style)
+        gamma = self.g(style)
+        beta = tf.expand_dims(tf.expand_dims(beta, axis=1), axis=1)
+        gamma = tf.expand_dims(tf.expand_dims(gamma, axis=1), axis=1)
+        mean, variance = tf.nn.moments(noise, axes=[1, 2], keepdims=True)
+        normed = (noise - mean) / (tf.math.sqrt(variance) + 1e-6)
+        return normed * gamma + beta
+
+    def get_config(self):
+        config = {
+            "units": self.units
+        }
+        base_config = super(AdaInstanceNormalization, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+
+custom_objects = {name: globals()[name] for name in globals() if isinstance(globals()[name], type) and issubclass(globals()[name], keras.layers.Layer)}

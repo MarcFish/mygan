@@ -19,7 +19,7 @@ def act_layer(i):
     return keras.layers.Activation("swish")(i)
 
 
-class HrGAN(DCGAN):
+class HrGAN(PerGAN):
     def build(self, input_shape):
         assert input_shape[0] >= 32
 
@@ -60,8 +60,8 @@ class HrGAN(DCGAN):
                     for l_ in l_list:
                         t_dict.setdefault(l_, [])
                         if l == l_:
-                            # o = c(o_dict[l], l, l_)
-                            o = o_dict[l]
+                            o = c(o_dict[l], l, l_)
+                            # o = o_dict[l]
                             t_dict[l_].append(o)
                         elif l > l_:
                             o = down(o_dict[l], l, l_)
@@ -106,8 +106,8 @@ class HrGAN(DCGAN):
                     for l_ in l_list:
                         t_dict.setdefault(l_, [])
                         if l == l_:
-                            # o = c(o_dict[l], l, l_)
-                            o = o_dict[l]
+                            o = c(o_dict[l], l, l_)
+                            # o = o_dict[l]
                             t_dict[l_].append(o)
                         elif l > l_:
                             o = down(o_dict[l], l, l_)
@@ -122,18 +122,24 @@ class HrGAN(DCGAN):
                     else:
                         o = keras.layers.Concatenate(axis=-1)(os)
 
-                    o = conv(filters=layer_dict[l] * self.filter_num, kernel_size=1, strides=1)(o)
+                    o = conv(filters=64, kernel_size=1, strides=1)(o)
+                    o = norm_layer(o)
+                    o = act_layer(o)
+                    o = conv(filters=64, kernel_size=3, strides=1)(o)
+                    o = norm_layer(o)
+                    o = act_layer(o)
+                    o = conv(filters=64, kernel_size=1, strides=1)(o)
                     o = norm_layer(o)
                     o = act_layer(o)
 
                     o_dict[l] = o
 
-        # os = []
-        # for l, o in o_dict.items():
-        #     if l >= 32:
-        #         o = conv(filters=input_shape[-1], kernel_size=1, strides=1)(o)
-        #         o = norm_layer(o)
-        #         o = act_layer(o)
-        #         os.append(o)
+        os = []
+        for l, o in o_dict.items():
+            if l >= 32:
+                o = conv(filters=input_shape[-1], kernel_size=1, strides=1)(o)
+                o = norm_layer(o)
+                o = act_layer(o)
+                os.append(o)
         o = keras.layers.Flatten()(o_dict[min(layer_dict.keys())])
-        self.dis = keras.Model(inputs=images, outputs=o)
+        self.dis = keras.Model(inputs=images, outputs=[o]+os)
