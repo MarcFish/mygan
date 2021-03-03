@@ -20,7 +20,7 @@ anime_dataset = process_numpy(np.load(anime_path), batch_size=64)
 ema = EMACallback()
 show = StyleShowCallback()
 path = PathCallback()
-model = StyleGAN2(filter_num=16)
+model = StyleGAN2(latent_dim=512, filter_num=16)
 model.build((64, 64, 3))
 model.compile(d_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5, beta_1=0., beta_2=0.99),
               g_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5, beta_1=0., beta_2=0.99),
@@ -28,4 +28,4 @@ model.compile(d_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=
 model.summary()
 keras.utils.plot_model(model.gen, show_shapes=True, to_file="gen.png", expand_nested=True)
 keras.utils.plot_model(model.dis, show_shapes=True, to_file="dis.png", expand_nested=True)
-model.fit(anime_dataset, epochs=20, callbacks=[ema, show, path])
+model.fit(anime_dataset, epochs=50, callbacks=[ema, show, path])

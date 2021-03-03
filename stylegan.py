@@ -116,7 +116,7 @@ class StyleGAN(DCGAN):
         style_list = [tf.random.normal((tf.shape(images)[0], self.latent_dim))] * self.m
         style_list += [tf.random.normal((tf.shape(images)[0], self.latent_dim))] * (self.n - self.m)
         noise = tf.random.normal(tf.shape(images))
-        inp = tf.ones((tf.shape(images)[0], self.latent_dim))
+        inp = tf.random.normal((tf.shape(images)[0], self.latent_dim))
         with tf.GradientTape(persistent=True) as tape:
             w_space = []
             for style in style_list:

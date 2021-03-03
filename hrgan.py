@@ -7,12 +7,12 @@ import random
 
 from pergan import PerGAN
 from dcgan import DCGAN
-from layers import NoiseLayer, GLULayer, AugmentLayer
+from layers import NoiseLayer, GLULayer, AugmentLayer, Conv2DMod
 from utils import apply_augment, get_perceptual_func, convt, conv, layer_dict
 
 
 def norm_layer(i):
-    return tfa.layers.InstanceNormalization()(i)
+    return keras.layers.BatchNormalization()(i)
 
 
 def act_layer(i):
