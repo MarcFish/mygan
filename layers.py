@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow_addons as tfa
+from tensorflow.python.keras.utils import conv_utils
 
 
 class NoiseLayer(keras.layers.Layer):
@@ -84,6 +85,55 @@ class AdaInstanceNormalization(keras.layers.Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
+
+
+class Conv2DMod(keras.layers.Layer):
+    def __init__(self, filters, kernel_size, strides=1, demod=True, padding="SAME", **kwargs):
+        super(Conv2DMod, self).__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = conv_utils.normalize_tuple(kernel_size, 2, 'kernel_size')
+        self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
+        self.demod = demod
+        self.padding = padding
+
+    def build(self, input_shape):
+        kernel_shape = self.kernel_size + (input_shape[0][-1], self.filters)
+        self.kernel = self.add_weight(shape=kernel_shape,
+                                      initializer='he_uniform',
+                                      name="kernel")
+        self.style = keras.layers.Dense(input_shape[0][-1], kernel_initializer="he_uniform")
+        super(Conv2DMod, self).build(input_shape)
+
+    def call(self, inputs, **kwargs):
+        x = tf.transpose(inputs[0], [0, 3, 1, 2])
+        w = tf.expand_dims(tf.expand_dims(tf.expand_dims(self.style(inputs[1]), axis=1), axis=1), axis=-1)
+        wo = tf.expand_dims(self.kernel, axis=0)
+        weights = wo * (w + 1)
+        if self.demod:
+            d = tf.math.sqrt(tf.reduce_sum(tf.math.square(weights), axis=[1, 2, 3], keepdims=True) + 1e-8)
+            weights = weights / d
+        x = tf.reshape(x, [1, -1, tf.shape(x)[2], tf.shape(x)[3]])
+        w = tf.reshape(tf.transpose(weights, [1, 2, 3, 0, 4]), [tf.shape(weights)[1], tf.shape(weights)[2], tf.shape(weights)[3], -1])
+
+        x = tf.nn.conv2d(x, w, strides=self.strides, padding=self.padding, data_format="NCHW")
+
+        x = tf.reshape(x, [-1, self.filters, tf.shape(x)[2], tf.shape(x)[3]])
+        x = tf.transpose(x, [0, 2, 3, 1])
+        return x
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0][0], input_shape[0][1] * self.strides, input_shape[0][2] * self.strides, self.filters
+
+    def get_config(self):
+        config = {
+            'filters': self.filters,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
+            'demod': self.demod,
+            "padding": self.padding
+        }
+        base_config = super(Conv2DMod, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 custom_objects = {name: globals()[name] for name in globals() if isinstance(globals()[name], type) and issubclass(globals()[name], keras.layers.Layer)}
