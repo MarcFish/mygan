@@ -208,6 +208,11 @@ class HrGAN(PerGAN):
                 os.append(o)
         o = keras.layers.Flatten()(o_dict[min(layer_dict.keys())])
         self.dis = keras.Model(inputs=images, outputs=[o]+os)
+        self.perform_gp = True
+        self.perform_pl = True
+        self.pl_mean = 0
+        self.pl_length = 0.
+
 
     def train_step(self, images):
         style_list = [tf.random.normal((tf.shape(images)[0], self.latent_dim))] * self.m
