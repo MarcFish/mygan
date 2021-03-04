@@ -16,14 +16,14 @@ from stylegan import StyleGAN
 # anime_dataset = process_directory(anime_path, batch_size=16)
 
 anime_path = "E:/project/data/process/picture/anime64.npy"
-anime_dataset = process_numpy(np.load(anime_path), batch_size=32)
+anime_dataset = process_numpy(np.load(anime_path), batch_size=8)
 
 ema = EMACallback()
 # show = ShowCallback()
 show = StyleShowCallback()
 path = PathCallback()
 
-model = HrGAN(latent_dim=512, filter_num=4)
+model = HrGAN(latent_dim=128, filter_num=8)
 model.build((64, 64, 3))
 model.compile(d_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5, beta_1=0., beta_2=0.99),
               g_optimizer=tfa.optimizers.AdamW(learning_rate=1e-4, weight_decay=5e-5, beta_1=0., beta_2=0.99),

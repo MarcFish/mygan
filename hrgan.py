@@ -36,10 +36,10 @@ class HrGAN(PerGAN):
             o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
             o = keras.layers.Add()([o, o_n])
             o = act_layer(o)
-            # o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
-            # o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
-            # o = keras.layers.Add()([o, o_n])
-            # o = act_layer(o)
+            o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
+            o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
+            o = keras.layers.Add()([o, o_n])
+            o = act_layer(o)
             return o
 
         def down(i, style, noise, l, l_):
@@ -48,10 +48,10 @@ class HrGAN(PerGAN):
             o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
             o = keras.layers.Add()([o, o_n])
             o = act_layer(o)
-            # o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
-            # o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
-            # o = keras.layers.Add()([o, o_n])
-            # o = act_layer(o)
+            o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
+            o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
+            o = keras.layers.Add()([o, o_n])
+            o = act_layer(o)
             return o
 
         def c(i, style, noise, l, l_):
@@ -60,10 +60,10 @@ class HrGAN(PerGAN):
             o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
             o = keras.layers.Add()([o, o_n])
             o = act_layer(o)
-            # o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
-            # o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
-            # o = keras.layers.Add()([o, o_n])
-            # o = act_layer(o)
+            o = Conv2DMod(layer_dict[l_] * self.filter_num, kernel_size=3, strides=1)([o, style])
+            o_n = conv(layer_dict[l_] * self.filter_num, kernel_size=1, strides=1)(noise_crop)
+            o = keras.layers.Add()([o, o_n])
+            o = act_layer(o)
             return o
 
         style_list = []
@@ -104,7 +104,7 @@ class HrGAN(PerGAN):
                     if len(os) == 1:
                         o = os[0]
                     else:
-                        o = keras.layers.Concatenate(axis=-1)(os)
+                        o = keras.layers.Add()(os)
 
                     o = conv(filters=layer_dict[l] * self.filter_num, kernel_size=1, strides=1)(o)
                     o = norm_layer(o)
@@ -185,7 +185,7 @@ class HrGAN(PerGAN):
                     if len(os) == 1:
                         o = os[0]
                     else:
-                        o = keras.layers.Concatenate(axis=-1)(os)
+                        o = keras.layers.Add()(os)
 
                     o = conv(filters=64, kernel_size=1, strides=1)(o)
                     o = norm_layer(o)
