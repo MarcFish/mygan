@@ -90,7 +90,7 @@ class AdaInstanceNormalization(keras.layers.Layer):
 class Conv2DMod(keras.layers.Layer):
     def __init__(self, filters, kernel_size, strides=1, demod=True, padding="SAME", **kwargs):
         super(Conv2DMod, self).__init__(**kwargs)
-        self.filters = filters
+        self.filters = int(filters)
         self.kernel_size = conv_utils.normalize_tuple(kernel_size, 2, 'kernel_size')
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.demod = demod
@@ -122,7 +122,7 @@ class Conv2DMod(keras.layers.Layer):
         return x
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0][0], input_shape[0][1] * self.strides, input_shape[0][2] * self.strides, self.filters
+        return input_shape[0][0], input_shape[0][1] // self.strides, input_shape[0][2] // self.strides, self.filters
 
     def get_config(self):
         config = {

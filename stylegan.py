@@ -4,8 +4,7 @@ import tensorflow_addons as tfa
 import argparse
 from tqdm import tqdm
 import random
-
-from dcgan import DCGAN
+from ragan import RaGAN
 from layers import AugmentLayer, AdaInstanceNormalization
 from utils import layer_dict, cal_gp, get_perceptual_func
 
@@ -13,12 +12,8 @@ perceptual = get_perceptual_func("vgg16")
 
 
 def convt(filters, kernel_size, strides, use_bias=False, padding="SAME"):
-    def fun(i):
-        o = keras.layers.UpSampling2D(size=strides, interpolation="bilinear")(i)
-        o = keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=1, use_bias=use_bias, padding=padding,
-                                kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02))
-        return o
-    return fun
+    return keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, use_bias=use_bias, padding=padding,
+                                        kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02))
 
 
 def conv(filters, kernel_size, strides, use_bias=False, padding="SAME"):
@@ -31,15 +26,15 @@ def act_layer(i):
 
 
 def norm_layer(i):
-    return keras.layers.BatchNormalization()(i)
+    return tfa.layers.InstanceNormalization()(i)
 
 
-class StyleGAN(DCGAN):
+class StyleGAN(RaGAN):
     def build(self, input_shape):
         self.M = keras.Sequential([keras.layers.InputLayer(input_shape=(self.latent_dim,))])
         for _ in range(8):
-            self.M.add(keras.layers.Dense(self.latent_dim, kernel_initializer="he_normal", activation="swish"))
-
+            self.M.add(keras.layers.Dense(self.latent_dim, kernel_initializer="he_normal"))
+            self.M.add(keras.layers.LeakyReLU(0.2))
         style_list = []
         inp = keras.layers.Input(shape=(self.latent_dim,))
         noise = keras.layers.Input(shape=input_shape)
@@ -49,7 +44,8 @@ class StyleGAN(DCGAN):
                 style = keras.layers.Input(shape=(self.latent_dim,))
                 style_list.append(style)
                 self.n += 1
-                o = inp[:, tf.newaxis, tf.newaxis, :]
+                o = keras.layers.Dense(self.latent_dim)(inp)
+                o = o[:, tf.newaxis, tf.newaxis, :]
                 o = convt(f * self.filter_num, kernel_size=min(layer_dict.keys()),
                           strides=1, padding="VALID")(o)
                 o = AdaInstanceNormalization(f * self.filter_num)([o, style])
@@ -116,7 +112,7 @@ class StyleGAN(DCGAN):
         style_list = [tf.random.normal((tf.shape(images)[0], self.latent_dim))] * self.m
         style_list += [tf.random.normal((tf.shape(images)[0], self.latent_dim))] * (self.n - self.m)
         noise = tf.random.normal(tf.shape(images))
-        inp = tf.random.normal((tf.shape(images)[0], self.latent_dim))
+        inp = tf.ones(shape=(tf.shape(images)[0], self.latent_dim))
         with tf.GradientTape(persistent=True) as tape:
             w_space = []
             for style in style_list:

@@ -15,6 +15,10 @@ perceptual = get_perceptual_func("ResNet50")
 def up(i, size):
     return keras.layers.UpSampling2D(size=size, interpolation="bilinear")(i)
     # return keras.layers.Conv2DTranspose(filters=i.shape[-1], kernel_size=3, strides=size, padding="SAME", kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.02), use_bias=False)(i)
+    # o = convt(filters=i.shape[-1], kernel_size=3, strides=size)(i)
+    # o = tfa.layers.InstanceNormalization()(o)
+    # o = act_layer(o)
+    # return o
 
 
 def conv(filters, kernel_size, strides, use_bias=False, padding="SAME"):
@@ -34,7 +38,8 @@ class StyleGAN2(StyleGAN):
     def build(self, input_shape):
         self.M = keras.Sequential([keras.layers.InputLayer(input_shape=(self.latent_dim,))])
         for _ in range(8):
-            self.M.add(keras.layers.Dense(self.latent_dim, kernel_initializer="he_normal", activation="swish"))
+            self.M.add(keras.layers.Dense(self.latent_dim, kernel_initializer="he_normal"))
+            self.M.add(keras.layers.LeakyReLU(0.2))
 
         style_list = []
         inp = keras.layers.Input(shape=(self.latent_dim,))
@@ -46,7 +51,8 @@ class StyleGAN2(StyleGAN):
                 style = keras.layers.Input(shape=(self.latent_dim,))
                 style_list.append(style)
                 self.n += 1
-                o = inp[:, tf.newaxis, tf.newaxis, :]
+                o = keras.layers.Dense(self.latent_dim)(inp)
+                o = o[:, tf.newaxis, tf.newaxis, :]
                 o = up(o, size=i)
                 o = Conv2DMod(f * self.filter_num, kernel_size=3, strides=1)([o, style])
                 noise_crop = keras.layers.Cropping2D((input_shape[0]-i)//2)(noise)
